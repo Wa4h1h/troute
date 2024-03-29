@@ -1,12 +1,16 @@
 package main
 
-import "fmt"
+import (
+	"fmt"
+)
 
 func main() {
-	i, err := HostnameToIp("localhost", ipV6)
+	ips, err := HostnameToIp("localhost", ipV4)
 	if err != nil {
 		panic(err)
 	}
 
-	fmt.Println(i)
+	for _, ip := range ips {
+		fmt.Println(fmt.Sprintf("%s %d", ip.bytes.String(), ip.version))
+	}
 }
