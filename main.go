@@ -2,15 +2,15 @@ package main
 
 import (
 	"fmt"
+
+	"github.com/Wa4h1h/troute/pkg/trace"
 )
 
 func main() {
-	ips, err := HostnameToIp("localhost", ipV4)
+	ips, err := trace.HostnameToIp("facebook.com", trace.IpV6)
 	if err != nil {
 		panic(err)
 	}
 
-	for _, ip := range ips {
-		fmt.Println(fmt.Sprintf("%s %d", ip.bytes.String(), ip.version))
-	}
+	fmt.Println(ips)
 }
