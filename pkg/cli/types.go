@@ -1,6 +1,8 @@
 package cli
 
-import "strconv"
+import (
+	"strconv"
+)
 
 type (
 	uint8Flag  uint8
@@ -14,6 +16,7 @@ func (u *uint8Flag) String() string {
 func (u *uint8Flag) Set(s string) error {
 	v, err := strconv.ParseUint(s, 10, 8)
 	*u = uint8Flag(v)
+
 	return err
 }
 
@@ -24,5 +27,6 @@ func (u *uint16Flag) String() string {
 func (u *uint16Flag) Set(s string) error {
 	v, err := strconv.ParseUint(s, 10, 16)
 	*u = uint16Flag(v)
+
 	return err
 }
