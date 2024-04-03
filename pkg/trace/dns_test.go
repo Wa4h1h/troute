@@ -56,7 +56,7 @@ func TestHostnameToIp(t *testing.T) {
 			},
 			{
 				"wrong ip version",
-				input{hostname: "localhost", ipVer: 10},
+				input{hostname: "localhost", ipVer: "10"},
 				nil,
 				errors.New("error: used verion 10 is not konwn: unknown ip version"),
 			},
@@ -67,7 +67,7 @@ func TestHostnameToIp(t *testing.T) {
 		t.Run(row.name, func(t *testing.T) {
 			t.Parallel()
 
-			ips, err := HostnameToIp(row.in.hostname, row.in.ipVer)
+			ips, err := hostnameToIps(row.in.hostname, row.in.ipVer)
 
 			require.NoError(t, err)
 
@@ -84,7 +84,7 @@ func TestHostnameToIp(t *testing.T) {
 		t.Run(row.name, func(t *testing.T) {
 			t.Parallel()
 
-			_, err := HostnameToIp(row.in.hostname, row.in.ipVer)
+			_, err := hostnameToIps(row.in.hostname, row.in.ipVer)
 
 			require.Error(t, err)
 

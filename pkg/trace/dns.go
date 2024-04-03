@@ -5,11 +5,11 @@ import (
 	"net"
 )
 
-type ipVersion uint8
+type ipVersion string
 
 const (
-	ipV4 ipVersion = iota
-	ipV6
+	ipV4 ipVersion = "ip4"
+	ipV6 ipVersion = "ip6"
 )
 
 type IP struct {
@@ -17,9 +17,9 @@ type IP struct {
 	version ipVersion
 }
 
-func HostnameToIp(hostname string, ipVer ipVersion) ([]*IP, error) {
+func hostnameToIps(hostname string, ipVer ipVersion) ([]*IP, error) {
 	if ipVer != ipV4 && ipVer != ipV6 {
-		return nil, fmt.Errorf("error: used verion %d is not konwn: %w", ipVer, ErrUnknownIPVersion)
+		return nil, fmt.Errorf("error: used verion %s is not konwn: %w", ipVer, ErrUnknownIPVersion)
 	}
 
 	found, err := net.LookupIP(hostname)
@@ -49,4 +49,13 @@ func HostnameToIp(hostname string, ipVer ipVersion) ([]*IP, error) {
 	}
 
 	return ips, nil
+}
+
+func ipToHostnames(ip string) ([]string, error) {
+	hosts, err := net.LookupAddr(ip)
+	if err != nil {
+		return nil, fmt.Errorf("error: looking hostname for %s: %w", ip, err)
+	}
+
+	return hosts, nil
 }
