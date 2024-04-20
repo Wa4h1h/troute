@@ -4,8 +4,6 @@ import (
 	"flag"
 	"fmt"
 	"os"
-
-	"github.com/Wa4h1h/troute/pkg/trace"
 )
 
 var (
@@ -36,7 +34,7 @@ func ParseFlags() {
 		"initial sequence number or TCP dst port (Defaults 80)")
 	flag.UintVar(&nprobes, "n", 3, "number of probes pro ttl")
 	flag.UintVar(&cprobes, "cp", 3, "number of concurrent probes pro ttl")
-	flag.UintVar(&chops, "ch", 1, "number of concurrent ttls")
+	flag.UintVar(&chops, "ch", 1, "number of concurrent ttls (only for UDP and ICMP)")
 	flag.UintVar(&probetimeout, "t", 3, "probe timeout in seconds")
 	flag.BoolVar(&debug, "d", false, "enable probe debug")
 
@@ -54,56 +52,13 @@ func Run() {
 	ParseFlags()
 
 	hosts := flag.Args()
-	if len(hosts) < 1 {
-		fmt.Println("hostname missing")
-		os.Exit(1)
-	}
 
-	if len(hosts) > 1 {
-		fmt.Println("provide only one hostname")
+	if len(hosts) != 0 {
+		fmt.Println("inly one hostname can be traced")
 		os.Exit(1)
 	}
 
 	if udpp {
 		port = 33434
 	}
-
-	t := trace.NewTrace(&trace.Config{
-		Host:         hosts[0],
-		Ipv:          resolveIpVersion(),
-		Proto:        resolveProto(),
-		StartTTL:     startTTL,
-		MaxTTL:       maxTTL,
-		Port:         uint16(port),
-		Nprobes:      nprobes,
-		Cprobes:      cprobes,
-		Chops:        chops,
-		Probetimeout: probetimeout,
-		Debug:        debug,
-	})
-
-	if err := t.Trace(); err != nil {
-		fmt.Println(err)
-		os.Exit(1)
-	}
-}
-
-func resolveIpVersion() string {
-	if ipv6 {
-		return "ip6"
-	}
-
-	return "ip4"
-}
-
-func resolveProto() string {
-	if tcpp {
-		return "tcp"
-	}
-
-	if icmpp {
-		return "icmp"
-	}
-
-	return "udp"
 }

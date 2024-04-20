@@ -2,60 +2,53 @@ package trace
 
 import (
 	"fmt"
+	"math/rand/v2"
 	"net"
 )
 
-type ipVersion string
+type ipVer uint8
 
 const (
-	ipV4 ipVersion = "ip4"
-	ipV6 ipVersion = "ip6"
+	ipV4 ipVer = iota
+	ipV6
 )
 
 type IP struct {
-	bytes   net.IP
-	version ipVersion
+	Ip       net.IP
+	Verstion ipVer
 }
 
-func hostnameToIps(hostname string, ipVer ipVersion) ([]*IP, error) {
-	if ipVer != ipV4 && ipVer != ipV6 {
-		return nil, fmt.Errorf("error: used verion %s is not konwn: %w", ipVer, ErrUnknownIPVersion)
-	}
-
-	found, err := net.LookupIP(hostname)
+func HostToIp(host string, ipver ipVer) ([]*IP, error) {
+	ips, err := net.LookupIP(host)
 	if err != nil {
-		return nil, fmt.Errorf("error: looking up ip address: %w", err)
+		return nil, fmt.Errorf("error: looking up hostname %s: %w", host, err)
 	}
 
-	ips := make([]*IP, 0)
+	if ipver != ipV4 && ipver != ipV6 {
+		return nil, fmt.Errorf("error: unknown IP version %d", ipver)
+	}
 
-	switch ipVer {
-	case ipV4:
-		for _, ip := range found {
-			ipv4 := ip.To4()
+	resIP := make([]*IP, 0)
 
-			if ipv4 != nil {
-				ips = append(ips, &IP{bytes: ipv4, version: ipVer})
-			}
-		}
-	case ipV6:
-		for _, ip := range found {
-			ipv6 := ip.To16()
-
-			if ipv6 != nil && ip.To4() == nil {
-				ips = append(ips, &IP{bytes: ipv6, version: ipV6})
-			}
+	for _, ip := range ips {
+		if ip.To4() != nil && ipver == ipV4 {
+			resIP = append(resIP, &IP{Ip: ip, Verstion: ipV4})
+		} else if ip.To16() != nil && ip.To4() == nil && ipver == ipV6 {
+			resIP = append(resIP, &IP{Ip: ip, Verstion: ipV6})
 		}
 	}
 
-	return ips, nil
+	return resIP, nil
 }
 
-func ipToHostnames(ip string) ([]string, error) {
+func IpTpHost(ip string) (string, error) {
 	hosts, err := net.LookupAddr(ip)
 	if err != nil {
-		return nil, fmt.Errorf("error: looking hostname for %s: %w", ip, err)
+		return "", fmt.Errorf("error: getting host from IP %s: %w", ip, err)
 	}
 
-	return hosts, nil
+	randIndex := rand.IntN(len(hosts))
+	host := hosts[randIndex]
+
+	return host, nil
 }

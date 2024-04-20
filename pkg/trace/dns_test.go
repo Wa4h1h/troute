@@ -3,6 +3,7 @@ package trace
 import (
 	"errors"
 	"net"
+	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -11,84 +12,91 @@ import (
 
 type input struct {
 	hostname string
-	ipVer    ipVersion
+	ipVer    ipVer
 }
 
-func TestHostnameToIp(t *testing.T) {
+func TestHostToIp(t *testing.T) {
 	t.Parallel()
-
-	mapTest := map[string][]struct {
-		name string
-		in   input
-		out  []*IP
-		err  error
+	table := []struct {
+		name   string
+		input  input
+		output []*IP
+		err    error
 	}{
-		"Ok": {
-			{
-				"should only return ipv4 addresses",
-				input{hostname: "localhost", ipVer: ipV4},
-				[]*IP{
-					{
-						bytes:   net.ParseIP("127.0.0.1"),
-						version: ipV4,
-					},
-				},
-				nil,
-			},
-			{
-				"should only return ipv6 addresses",
-				input{hostname: "localhost", ipVer: ipV6},
-				[]*IP{
-					{
-						bytes:   net.ParseIP("::1"),
-						version: ipV6,
-					},
-				},
-				nil,
-			},
+		{
+			name:   "host returns list of ipv4 addresse",
+			input:  input{hostname: "localhost", ipVer: ipV4},
+			output: []*IP{{Ip: net.ParseIP("127.0.0.1"), Verstion: ipV4}},
 		},
-		"Error": {
-			{
-				"unknown host",
-				input{hostname: "unknown hostname", ipVer: ipV4},
-				nil,
-				errors.New("error: looking up ip address: lookup unknown host: no such host"),
-			},
-			{
-				"wrong ip version",
-				input{hostname: "localhost", ipVer: "10"},
-				nil,
-				errors.New("error: used verion 10 is not konwn: unknown ip version"),
-			},
+		{
+			name:   "host returns list of ipv6 addresse",
+			input:  input{hostname: "localhost", ipVer: ipV6},
+			output: []*IP{{Ip: net.ParseIP("::1"), Verstion: ipV6}},
+		},
+		{
+			name: "host unkown", input: input{hostname: "unknown", ipVer: ipV4},
+			output: nil, err: errors.New("error: looking up hostname unknown"),
+		},
+		{
+			name: "wrong ip version", input: input{hostname: "localhost", ipVer: 10},
+			output: nil, err: errors.New("error: unknown IP version"),
 		},
 	}
 
-	for _, row := range mapTest["Ok"] {
+	for _, row := range table {
 		t.Run(row.name, func(t *testing.T) {
 			t.Parallel()
 
-			ips, err := hostnameToIps(row.in.hostname, row.in.ipVer)
+			res, err := HostToIp(row.input.hostname, row.input.ipVer)
 
-			require.NoError(t, err)
+			if row.err == nil {
+				require.Nil(t, err)
+				assert.Equal(t, len(row.output), len(res))
 
-			assert.Equal(t, len(row.out), len(ips))
+				for i, ip := range res {
+					assert.Equal(t, row.output[i].Ip.String(), ip.Ip.String())
+					assert.Equal(t, row.output[i].Verstion, ip.Verstion)
+				}
 
-			for i, val := range row.out {
-				assert.Equal(t, string(val.bytes), string(ips[i].bytes))
-				assert.Equal(t, val.version, ips[i].version)
+			} else {
+				require.NotNil(t, err)
+				assert.True(t, strings.HasPrefix(err.Error(), row.err.Error()))
 			}
 		})
 	}
+}
 
-	for _, row := range mapTest["Error"] {
+func TestIpTpHost(t *testing.T) {
+	t.Parallel()
+	table := []struct {
+		name   string
+		input  string
+		output string
+		err    error
+	}{
+		{
+			name:  "ip returns a valid hostname",
+			input: "127.0.0.1", output: "localhost",
+		},
+		{
+			name:  "ip can not be mapped to a valid hostname",
+			input: "not-valid-ip", err: errors.New("error: getting host from IP not-valid-ip"),
+		},
+	}
+
+	for _, row := range table {
 		t.Run(row.name, func(t *testing.T) {
 			t.Parallel()
 
-			_, err := hostnameToIps(row.in.hostname, row.in.ipVer)
+			host, err := IpTpHost(row.input)
 
-			require.Error(t, err)
-
-			assert.Equal(t, row.err.Error(), err.Error())
+			if row.err == nil {
+				require.Nil(t, err)
+				assert.Equal(t, row.output, host)
+			} else {
+				require.NotNil(t, err)
+				assert.True(t, strings.HasPrefix(err.Error(), row.err.Error()))
+			}
 		})
 	}
 }
