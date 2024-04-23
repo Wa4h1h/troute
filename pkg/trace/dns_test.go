@@ -12,11 +12,12 @@ import (
 
 type input struct {
 	hostname string
-	ipVer    ipVer
+	ipVer    IpVer
 }
 
 func TestHostToIp(t *testing.T) {
 	t.Parallel()
+
 	table := []struct {
 		name   string
 		input  input
@@ -24,21 +25,21 @@ func TestHostToIp(t *testing.T) {
 		err    error
 	}{
 		{
-			name:   "host returns list of ipv4 addresse",
-			input:  input{hostname: "localhost", ipVer: ipV4},
-			output: []*IP{{Ip: net.ParseIP("127.0.0.1"), Verstion: ipV4}},
+			name:   "host returns list of ipv4 address",
+			input:  input{hostname: "localhost", ipVer: IPv4},
+			output: []*IP{{Ip: net.ParseIP("127.0.0.1"), Verstion: IPv4}},
 		},
 		{
-			name:   "host returns list of ipv6 addresse",
-			input:  input{hostname: "localhost", ipVer: ipV6},
-			output: []*IP{{Ip: net.ParseIP("::1"), Verstion: ipV6}},
+			name:   "host returns list of ipv6 address",
+			input:  input{hostname: "localhost", ipVer: IPv6},
+			output: []*IP{{Ip: net.ParseIP("::1"), Verstion: IPv6}},
 		},
 		{
-			name: "host unkown", input: input{hostname: "unknown", ipVer: ipV4},
+			name: "host unknown", input: input{hostname: "unknown", ipVer: IPv4},
 			output: nil, err: errors.New("error: looking up hostname unknown"),
 		},
 		{
-			name: "wrong ip version", input: input{hostname: "localhost", ipVer: 10},
+			name: "wrong ip version", input: input{hostname: "localhost", ipVer: "10"},
 			output: nil, err: errors.New("error: unknown IP version"),
 		},
 	}
@@ -68,11 +69,11 @@ func TestHostToIp(t *testing.T) {
 
 func TestIpTpHost(t *testing.T) {
 	t.Parallel()
+
 	table := []struct {
 		name   string
 		input  string
 		output string
-		err    error
 	}{
 		{
 			name:  "ip returns a valid hostname",
@@ -88,7 +89,7 @@ func TestIpTpHost(t *testing.T) {
 		t.Run(row.name, func(t *testing.T) {
 			t.Parallel()
 
-			host, err := IpTpHost(row.input)
+			host := IpToHost(row.input)
 
 			if row.err == nil {
 				require.Nil(t, err)
