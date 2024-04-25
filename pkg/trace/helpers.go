@@ -23,7 +23,6 @@ func GetOutboundIPAndSubnet(ipver IpVer) (string, string) {
 					return ipnet.IP.String(), fmt.Sprintf("%s", address)
 				}
 			}
-
 		}
 	}
 

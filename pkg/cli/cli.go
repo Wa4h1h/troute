@@ -80,9 +80,9 @@ func Run() {
 		})
 	}
 
-	err := t.Trace(hosts[0])
-
-	fmt.Println(err)
+	if err := t.Trace(hosts[0]); err != nil {
+		fmt.Fprint(os.Stderr, err.Error())
+	}
 }
 
 func resolveIpVersion() trace.IpVer {

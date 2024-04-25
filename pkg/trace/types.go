@@ -1,6 +1,10 @@
 package trace
 
-import "golang.org/x/net/icmp"
+import (
+	"time"
+
+	"golang.org/x/net/icmp"
+)
 
 type IpVer string
 
@@ -42,7 +46,7 @@ var defaultConfig = &TracerConfig{
 type Probe struct {
 	src      string
 	host     string
-	rtt      float64
+	rtts     []time.Duration
 	valid    bool
 	icmpType icmp.Type
 }
@@ -50,5 +54,4 @@ type Probe struct {
 type Hop struct {
 	index  int
 	probes []*Probe
-	last   bool
 }
