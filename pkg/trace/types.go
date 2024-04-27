@@ -6,21 +6,14 @@ import (
 	"golang.org/x/net/icmp"
 )
 
-type IpVer string
-
 const (
-	UDP4         = "udp4"
-	UDP6         = "udp6"
-	TCP          = "tcp"
-	ICMP         = "icmp"
-	IPv4   IpVer = "ip4"
-	IPv6   IpVer = "ip6"
-	ICMPv4       = 1
-	ICMPv6       = 58
+	UDP    = "udp4"
+	TCP    = "tcp"
+	ICMP   = "ip4:icmp"
+	ICMPv4 = 1
 )
 
 type TracerConfig struct {
-	IpVer        IpVer
 	Proto        string
 	StartTTL     int
 	MaxTTL       int
@@ -32,8 +25,7 @@ type TracerConfig struct {
 }
 
 var defaultConfig = &TracerConfig{
-	IpVer:        IPv4,
-	Proto:        UDP4,
+	Proto:        UDP,
 	StartTTL:     1,
 	MaxTTL:       30,
 	Port:         33434,
@@ -46,7 +38,7 @@ var defaultConfig = &TracerConfig{
 type Probe struct {
 	src      string
 	host     string
-	rtts     []time.Duration
+	rtt      time.Duration
 	valid    bool
 	icmpType icmp.Type
 }

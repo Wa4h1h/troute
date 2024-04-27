@@ -7,27 +7,20 @@ import (
 )
 
 type IP struct {
-	Ip       net.IP
-	Verstion IpVer
+	Ip net.IP
 }
 
-func HostToIp(host string, ipver IpVer) ([]*IP, error) {
+func HostToIp(host string) ([]*IP, error) {
 	ips, err := net.LookupIP(host)
 	if err != nil {
 		return nil, fmt.Errorf("error: looking up hostname %s: %w", host, err)
 	}
 
-	if ipver != IPv4 && ipver != IPv6 {
-		return nil, fmt.Errorf("error: unknown IP version %s", ipver)
-	}
-
 	resIP := make([]*IP, 0)
 
 	for _, ip := range ips {
-		if ip.To4() != nil && ipver == IPv4 {
-			resIP = append(resIP, &IP{Ip: ip, Verstion: IPv4})
-		} else if ip.To16() != nil && ip.To4() == nil && ipver == IPv6 {
-			resIP = append(resIP, &IP{Ip: ip, Verstion: IPv6})
+		if ip.To4() != nil {
+			resIP = append(resIP, &IP{Ip: ip})
 		}
 	}
 

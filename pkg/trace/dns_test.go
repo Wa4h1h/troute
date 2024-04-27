@@ -10,37 +10,23 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-type input struct {
-	hostname string
-	ipVer    IpVer
-}
-
 func TestHostToIp(t *testing.T) {
 	t.Parallel()
 
 	table := []struct {
 		name   string
-		input  input
+		input  string
 		output []*IP
 		err    error
 	}{
 		{
 			name:   "host returns list of ipv4 address",
-			input:  input{hostname: "localhost", ipVer: IPv4},
-			output: []*IP{{Ip: net.ParseIP("127.0.0.1"), Verstion: IPv4}},
+			input:  "localhost",
+			output: []*IP{{Ip: net.ParseIP("127.0.0.1")}},
 		},
 		{
-			name:   "host returns list of ipv6 address",
-			input:  input{hostname: "localhost", ipVer: IPv6},
-			output: []*IP{{Ip: net.ParseIP("::1"), Verstion: IPv6}},
-		},
-		{
-			name: "host unknown", input: input{hostname: "unknown", ipVer: IPv4},
+			name: "host unknown", input: "unknown",
 			output: nil, err: errors.New("error: looking up hostname unknown"),
-		},
-		{
-			name: "wrong ip version", input: input{hostname: "localhost", ipVer: "10"},
-			output: nil, err: errors.New("error: unknown IP version"),
 		},
 	}
 
@@ -48,7 +34,7 @@ func TestHostToIp(t *testing.T) {
 		t.Run(row.name, func(t *testing.T) {
 			t.Parallel()
 
-			res, err := HostToIp(row.input.hostname, row.input.ipVer)
+			res, err := HostToIp(row.input)
 
 			if row.err == nil {
 				require.Nil(t, err)
@@ -56,7 +42,6 @@ func TestHostToIp(t *testing.T) {
 
 				for i, ip := range res {
 					assert.Equal(t, row.output[i].Ip.String(), ip.Ip.String())
-					assert.Equal(t, row.output[i].Verstion, ip.Verstion)
 				}
 
 			} else {
@@ -81,7 +66,7 @@ func TestIpTpHost(t *testing.T) {
 		},
 		{
 			name:  "ip can not be mapped to a valid hostname",
-			input: "not-valid-ip", err: errors.New("error: getting host from IP not-valid-ip"),
+			input: "not-valid-ip", output: "not-valid-ip",
 		},
 	}
 
@@ -91,13 +76,7 @@ func TestIpTpHost(t *testing.T) {
 
 			host := IpToHost(row.input)
 
-			if row.err == nil {
-				require.Nil(t, err)
-				assert.Equal(t, row.output, host)
-			} else {
-				require.NotNil(t, err)
-				assert.True(t, strings.HasPrefix(err.Error(), row.err.Error()))
-			}
+			assert.Equal(t, row.output, host)
 		})
 	}
 }

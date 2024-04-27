@@ -9,8 +9,6 @@ import (
 )
 
 var (
-	ipv4         bool
-	ipv6         bool
 	icmpp        bool
 	tcpp         bool
 	udpp         bool
@@ -25,8 +23,6 @@ var (
 )
 
 func ParseFlags() {
-	flag.BoolVar(&ipv4, "4", true, "use ip version 4")
-	flag.BoolVar(&ipv6, "6", false, "use ip version 6")
 	flag.BoolVar(&icmpp, "I", false, "use icmp echo for probes")
 	flag.BoolVar(&tcpp, "T", false, "use tcp SYN for probes")
 	flag.BoolVar(&udpp, "U", true, "use udp packet for probes")
@@ -41,9 +37,9 @@ func ParseFlags() {
 	flag.BoolVar(&debug, "d", false, "enable probe debug")
 
 	flag.Usage = func() {
-		fmt.Println(`Usage: troute [options] host
+		fmt.Fprintln(os.Stdout, `Usage: troute [options] host
 Use troute -h or --help for more information.`)
-		fmt.Println("Options:")
+		fmt.Fprintln(os.Stdout, "Options:")
 		flag.PrintDefaults()
 	}
 
@@ -56,11 +52,16 @@ func Run() {
 	hosts := flag.Args()
 
 	if len(hosts) != 1 {
-		fmt.Println("only one hostname can be traced")
+		fmt.Fprintln(os.Stderr, "only one hostname can be traced")
 		os.Exit(1)
 	}
 
-	if udpp {
+	switch {
+	case tcpp:
+		port = 80
+	case icmpp:
+		port = 0
+	default:
 		port = 33434
 	}
 
@@ -68,7 +69,6 @@ func Run() {
 
 	if len(os.Args) > 2 {
 		t = trace.NewTracer(&trace.TracerConfig{
-			IpVer:        resolveIpVersion(),
 			Proto:        resolveProto(),
 			StartTTL:     startTTL,
 			MaxTTL:       maxTTL,
@@ -85,18 +85,6 @@ func Run() {
 	}
 }
 
-func resolveIpVersion() trace.IpVer {
-	if ipv6 {
-		return trace.IPv6
-	}
-
-	if ipv4 {
-		return trace.IPv4
-	}
-
-	return trace.IPv4
-}
-
 func resolveProto() string {
 	if icmpp {
 		return trace.ICMP
@@ -106,11 +94,5 @@ func resolveProto() string {
 		return trace.TCP
 	}
 
-	if udpp {
-		if ipv6 {
-			return trace.UDP6
-		}
-	}
-
-	return trace.UDP4
+	return trace.UDP
 }

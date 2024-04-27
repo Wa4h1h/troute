@@ -12,20 +12,16 @@ import (
 	"strings"
 	"time"
 
-	"golang.org/x/net/ipv4"
-	"golang.org/x/net/ipv6"
-
 	"golang.org/x/net/icmp"
+	"golang.org/x/net/ipv4"
 )
 
 type Tracer struct {
 	cfg     *TracerConfig
 	lconn   *icmp.PacketConn
+	dst     *IP
 	sconn   net.PacketConn
 	nextTTL int
-	dst     *IP
-	laddr   string
-	lsubnet string
 }
 
 var DefaultTracer = &Tracer{cfg: defaultConfig}
@@ -35,14 +31,13 @@ func NewTracer(cfg *TracerConfig) *Tracer {
 }
 
 func (t *Tracer) Trace(host string) error {
-	ips, err := HostToIp(host, t.cfg.IpVer)
+	ips, err := HostToIp(host)
 	if err != nil {
 		return err
 	}
 
 	if len(ips) < 1 {
-		fmt.Fprintf(os.Stdout, "troute: %s has no %s ip\n",
-			host, t.cfg.IpVer)
+		fmt.Fprintf(os.Stdout, "troute: %s has no ipv4 ip\n", host)
 
 		return nil
 	}
@@ -61,8 +56,7 @@ func (t *Tracer) Trace(host string) error {
 }
 
 func (t *Tracer) trace() error {
-	t.laddr, t.lsubnet = GetOutboundIPAndSubnet(t.cfg.IpVer)
-	conn, err := icmp.ListenPacket(t.cfg.Proto, t.laddr)
+	conn, err := icmp.ListenPacket(t.cfg.Proto, "0.0.0.0")
 	if err != nil {
 		return fmt.Errorf("error: starting icmp listener: %w", err)
 	}
@@ -70,7 +64,7 @@ func (t *Tracer) trace() error {
 	t.lconn = conn
 
 	switch t.cfg.Proto {
-	case UDP4, UDP6:
+	case UDP:
 		conn, err := net.ListenPacket(t.cfg.Proto, ":")
 		if err != nil {
 			return fmt.Errorf("error: dialing %s %s: %w", t.cfg.Proto, t.dst.Ip.String(), err)
@@ -78,11 +72,24 @@ func (t *Tracer) trace() error {
 
 		t.sconn = conn
 
+		defer func() {
+			if err := t.sconn.Close(); err != nil {
+				fmt.Fprintln(os.Stderr, err)
+			}
+		}()
+
 	case TCP:
 	case ICMP:
+		t.sconn = t.lconn
 	default:
 		return fmt.Errorf("error: unkown protocol: %s", t.cfg.Proto)
 	}
+
+	defer func() {
+		if err := t.lconn.Close(); err != nil {
+			fmt.Fprintln(os.Stderr, err)
+		}
+	}()
 
 	if err := t.hops(); err != nil {
 		return err
@@ -92,14 +99,14 @@ func (t *Tracer) trace() error {
 }
 
 func (t *Tracer) setTTL() error {
-	switch t.cfg.IpVer {
-	case IPv4:
+	switch t.cfg.Proto {
+	case UDP, TCP:
 		if err := ipv4.NewPacketConn(t.sconn).SetTTL(t.nextTTL); err != nil {
 			return fmt.Errorf("error: setting ipv4 ttl: %w", err)
 		}
-	case IPv6:
-		if err := ipv6.NewPacketConn(t.sconn).SetHopLimit(t.nextTTL); err != nil {
-			return fmt.Errorf("error: setting ipv6 ttl: %w", err)
+	case ICMP:
+		if err := t.lconn.IPv4PacketConn().SetTTL(t.nextTTL); err != nil {
+			return fmt.Errorf("error: setting ipv4 ttl: %w", err)
 		}
 	}
 
@@ -208,7 +215,7 @@ func (t *Tracer) execProbe() (*Probe, error) {
 	var dst net.Addr
 
 	switch t.cfg.Proto {
-	case UDP4, UDP6:
+	case UDP:
 		dst = &net.UDPAddr{IP: t.dst.Ip, Port: t.cfg.Port}
 	case ICMP:
 		dst = &net.IPAddr{IP: t.dst.Ip}
@@ -220,7 +227,29 @@ func (t *Tracer) execProbe() (*Probe, error) {
 
 	start := time.Now()
 
-	if _, err := t.sconn.WriteTo([]byte{0x0}, dst); err != nil {
+	var request []byte
+
+	switch t.cfg.Proto {
+	case UDP:
+		request = []byte{0x0}
+	case ICMP:
+		m := icmp.Message{
+			Type: ipv4.ICMPTypeEcho, Code: 0,
+			Body: &icmp.Echo{
+				ID: os.Getpid() & 0xffff, Seq: t.cfg.Port, //<< uint(seq), // TODO
+				Data: []byte{0x0},
+			},
+		}
+
+		bytes, err := m.Marshal(nil)
+		if err != nil {
+			return nil, fmt.Errorf("error: marshaling ICMP echo: %w", err)
+		}
+
+		request = bytes
+	}
+
+	if _, err := t.sconn.WriteTo(request, dst); err != nil {
 		return nil, fmt.Errorf("error: sending probe: %w", err)
 	}
 
@@ -250,10 +279,7 @@ func (t *Tracer) execProbe() (*Probe, error) {
 				return nil, err
 			}
 
-			end := time.Since(start)
-
-			p.rtts = make([]time.Duration, 0)
-			p.rtts = append(p.rtts, end)
+			p.rtt = time.Since(start)
 
 			return p, err
 		}
@@ -261,18 +287,19 @@ func (t *Tracer) execProbe() (*Probe, error) {
 }
 
 func (t *Tracer) parseICMP(bytes []byte, src net.Addr) (*Probe, error) {
-	icmpVer := ICMPv4
-	if t.cfg.IpVer == IPv6 {
-		icmpVer = ICMPv6
-	}
-
-	msg, err := icmp.ParseMessage(icmpVer, bytes)
+	msg, err := icmp.ParseMessage(ICMPv4, bytes)
 	if err != nil {
 		return nil, fmt.Errorf("error: parsing icmp message: %w", err)
 	}
 
 	probe := new(Probe)
-	srcIP := src.String()[:strings.Index(src.String(), ":")]
+	var srcIP string
+	switch t.cfg.Proto {
+	case UDP:
+		srcIP = src.String()[:strings.Index(src.String(), ":")]
+	case ICMP:
+		srcIP = src.String()
+	}
 	host := IpToHost(srcIP)
 
 	probe.host = host
@@ -287,9 +314,10 @@ func (t *Tracer) getHopIndex() int {
 	var index int
 
 	switch t.cfg.Proto {
-	case UDP4, UDP6:
+	case UDP:
 		index = t.cfg.Port - 33434
 	case ICMP:
+		index = t.cfg.Port
 	}
 
 	return index
@@ -301,19 +329,10 @@ func (t *Tracer) istLastHop(h *Hop) bool {
 Loop:
 
 	for _, p := range h.probes {
-		switch t.cfg.IpVer {
-		case IPv4:
-			if p.icmpType == ipv4.ICMPTypeDestinationUnreachable {
-				last = true
+		if p.icmpType == ipv4.ICMPTypeDestinationUnreachable || p.icmpType == ipv4.ICMPTypeEchoReply {
+			last = true
 
-				break Loop
-			}
-		case IPv6:
-			if p.icmpType == ipv6.ICMPTypeDestinationUnreachable {
-				last = true
-
-				break Loop
-			}
+			break Loop
 		}
 	}
 
@@ -321,24 +340,26 @@ Loop:
 }
 
 func (t *Tracer) printHop(h *Hop) {
-	fmt.Fprintf(os.Stdout, "%d ", h.index+1)
+	fmt.Fprintf(os.Stdout, "%d\t", h.index+1)
 
 	probes := make([]string, 0)
 	for i, p := range h.probes {
 		if !p.valid {
-			fmt.Fprint(os.Stdout, " * ")
+			fmt.Fprint(os.Stdout, "* ")
 		} else {
 			if !slices.Contains(probes, p.host) {
 				if i > 0 {
-					fmt.Fprint(os.Stdout, "\n  ")
+					indent := strings.Builder{}
+					indent.WriteString("\t")
+					if h.index+1 > 9 {
+						indent.WriteString("\t")
+					}
+					fmt.Fprint(os.Stdout, "\n\t")
 				}
 				fmt.Fprintf(os.Stdout, "%s (%s)", p.host, p.src)
 			}
 
-			for _, rtt := range p.rtts {
-				fmt.Fprintf(os.Stdout, " %v ", rtt)
-			}
-
+			fmt.Fprintf(os.Stdout, " %v ", p.rtt)
 		}
 
 		probes = append(probes, p.host)
