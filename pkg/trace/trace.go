@@ -236,14 +236,15 @@ func (t *Tracer) execProbe() (*Probe, error) {
 		m := icmp.Message{
 			Type: ipv4.ICMPTypeEcho, Code: 0,
 			Body: &icmp.Echo{
-				ID: os.Getpid() & 0xffff, Seq: t.cfg.Port, //<< uint(seq), // TODO
+				ID:   os.Getpid() & 0xffff,
+				Seq:  t.cfg.Port,
 				Data: []byte{0x0},
 			},
 		}
 
 		bytes, err := m.Marshal(nil)
 		if err != nil {
-			return nil, fmt.Errorf("error: marshaling ICMP echo: %w", err)
+			return nil, fmt.Errorf("error: marshal ICMP echo: %w", err)
 		}
 
 		request = bytes

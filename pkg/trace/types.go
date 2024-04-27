@@ -1,14 +1,12 @@
 package trace
 
 import (
-	"time"
-
 	"golang.org/x/net/icmp"
+	"time"
 )
 
 const (
 	UDP    = "udp4"
-	TCP    = "tcp"
 	ICMP   = "ip4:icmp"
 	ICMPv4 = 1
 )
@@ -39,11 +37,11 @@ type Probe struct {
 	src      string
 	host     string
 	rtt      time.Duration
-	valid    bool
 	icmpType icmp.Type
+	valid    bool
 }
 
 type Hop struct {
-	index  int
 	probes []*Probe
+	index  int
 }
