@@ -10,7 +10,6 @@ import (
 
 var (
 	icmpp        bool
-	tcpp         bool
 	udpp         bool
 	startTTL     int
 	maxTTL       int
