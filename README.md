@@ -24,7 +24,7 @@ Options:
   -I	use icmp echo probes
   -U	use udp packet probes (default true)
   -ch int
-    	number of concurrent ttls (only for UDP and ICMP) (default 1)
+    	number of concurrent ttls (default 1)
   -cp int
     	number of concurrent probes pro ttl (default 3)
   -max-ttl int
