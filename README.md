@@ -1,14 +1,9 @@
 # troute
 Go implementation of the traceroute command
 
-### install
+### Install
 ```bash
 go install github.com/Wa4h1h/troute@latest
-```
-OR
-### generate build
-```bash
-make
 ```
 
 ### Features
