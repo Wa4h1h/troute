@@ -1,8 +1,9 @@
 package trace
 
 import (
-	"golang.org/x/net/icmp"
 	"time"
+
+	"golang.org/x/net/icmp"
 )
 
 const (

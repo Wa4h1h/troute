@@ -19,7 +19,6 @@ var (
 	cprobes      int
 	chops        int
 	probetimeout int
-	debug        bool
 )
 
 func ParseFlags() {
@@ -29,7 +28,7 @@ func ParseFlags() {
 	flag.IntVar(&maxTTL, "max-ttl", 30, "specifies the maximum number of hops (max ttl value)")
 	flag.IntVar(&nprobes, "n", 3, "number of probes pro ttl")
 	flag.IntVar(&cprobes, "cp", 3, "number of concurrent probes pro ttl")
-	flag.IntVar(&chops, "ch", 1, "number of concurrent ttls (only for UDP and ICMP)")
+	flag.IntVar(&chops, "ch", 1, "number of concurrent ttls")
 	flag.IntVar(&probetimeout, "t", 3, "probe timeout in seconds")
 
 	flag.Usage = func() {

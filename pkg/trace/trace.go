@@ -50,7 +50,7 @@ func (t *Tracer) Trace(host string) error {
 			"%s will be used\n", host, t.dst.Ip.String())
 	}
 
-	fmt.Fprintf(os.Stdout, "troute %s (%s) with max hops %d\n", host, t.dst.Ip.String(), t.cfg.MaxTTL)
+	fmt.Fprintf(os.Stdout, "tracing %s (%s) with max hops %d\n", host, t.dst.Ip.String(), t.cfg.MaxTTL)
 
 	return t.trace()
 }
