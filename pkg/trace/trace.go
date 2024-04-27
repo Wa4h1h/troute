@@ -77,8 +77,6 @@ func (t *Tracer) trace() error {
 				fmt.Fprintln(os.Stderr, err)
 			}
 		}()
-
-	case TCP:
 	case ICMP:
 		t.sconn = t.lconn
 	default:
@@ -100,7 +98,7 @@ func (t *Tracer) trace() error {
 
 func (t *Tracer) setTTL() error {
 	switch t.cfg.Proto {
-	case UDP, TCP:
+	case UDP:
 		if err := ipv4.NewPacketConn(t.sconn).SetTTL(t.nextTTL); err != nil {
 			return fmt.Errorf("error: setting ipv4 ttl: %w", err)
 		}

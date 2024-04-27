@@ -84,9 +84,5 @@ func resolveProto() string {
 		return trace.ICMP
 	}
 
-	if tcpp {
-		return trace.TCP
-	}
-
 	return trace.UDP
 }
