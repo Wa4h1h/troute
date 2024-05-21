@@ -11,6 +11,7 @@ go install github.com/Wa4h1h/troute@latest
 - [X] ICMP tracing(requires root)
 - [X] Concurrent hops/probes execution
 - [ ] TCP tracing(requires root)
+- [ ] Enable ipv6 tracing
 
 ### Usage
 ```bash
