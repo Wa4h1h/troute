@@ -6,10 +6,11 @@ Go implementation of the traceroute command
 go install github.com/Wa4h1h/troute@latest
 ```
 
-### Features
-* UDP tracing(does not require root)
-* ICMP tracing(requires root)
-* Concurrent hops/probes execution
+### TODOS
+- [X] UDP tracing(does not require root)
+- [X] ICMP tracing(requires root)
+- [X] Concurrent hops/probes execution
+- [ ] TCP tracing(requires root)
 
 ### Usage
 ```bash
